@@ -55,14 +55,14 @@ const taimuRipu = async () => {
   taimuRipu();
 };
 
-browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (
-    changeInfo.status === "complete" &&
-    String(tab.url).includes("https://www.youtube.com/watch")
-  ) {
-    browser.scripting.executeScript({
-      target: { tabId: tabId },
-      func: taimuRipu,
-    });
-  }
-});
+// browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+//   if (
+//     changeInfo.status === "complete" &&
+//     String(tab.url).includes("https://www.youtube.com/watch")
+//   ) {
+//     browser.scripting.executeScript({
+//       target: { tabId: tabId },
+//       func: taimuRipu,
+//     });
+//   }
+// });
