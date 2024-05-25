@@ -1,21 +1,35 @@
 const taimuRipu = () => {
   const videoContainer = document.getElementById("movie_player");
-  const isAd = videoContainer?.classList.contains("ad-interrupting") || videoContainer?.classList.contains("ad-showing");
+  const isAd = videoContainer?.classList.contains("ad-interrupting") || videoContainer?.classList.contains("ad-showing");  
+  if(!isAd){ //prevent staticAds for loop run too many times
+    return;
+  }
   const skipLock = document.querySelector(".ytp-ad-preview-text")?.innerText || document.getElementsByClassName("video-ads")[0]?.childNodes.length > 0;
   const surveyLock = document.querySelector(".ytp-ad-survey")?.length > 0;
-  
-  if (isAd && skipLock) {
-    const videoPlayer = document.getElementsByClassName("video-stream")[0];
-    videoPlayer.muted = true; // videoPlayer.volume = 0;
-    videoPlayer.currentTime = videoPlayer.duration - 0.1;
-    videoPlayer.paused && videoPlayer.play()
-    // CLICK ON THE SKIP AD BTN
-    document.querySelector(".ytp-ad-skip-button")?.click();
-    document.querySelector(".ytp-ad-skip-button-modern")?.click();
-  } else if (isAd && surveyLock) {
-    // CLICK ON THE SKIP SURVEY BTN
-    document.querySelector(".ytp-ad-skip-button")?.click();
-    document.querySelector(".ytp-ad-skip-button-modern")?.click();
+
+  try{
+    // document.querySelector(".mgp_videoElement")
+
+    if (skipLock) {
+      const videoPlayer = document.getElementsByClassName("video-stream")[0];
+      if(videoPlayer.duration){        
+        videoPlayer.muted = true; // videoPlayer.volume = 0;
+        videoPlayer.currentTime = videoPlayer.duration - 0.1;
+        videoPlayer.paused && videoPlayer.play()
+      }
+      // CLICK ON THE SKIP AD BTN
+      document.querySelector(".ytp-ad-skip-button")?.click();
+      document.querySelector(".ytp-ad-skip-button-modern")?.click();
+    } else if (surveyLock) {
+      // CLICK ON THE SKIP SURVEY BTN
+      document.querySelector(".ytp-ad-skip-button")?.click();
+      document.querySelector(".ytp-ad-skip-button-modern")?.click();
+    }
+  }
+  catch (err){
+    console.error(err.message);
+    console.log(videoContainer)
+    console.log(document.body)
   }
   const staticAds = [".ytd-companion-slot-renderer", ".ytd-action-companion-ad-renderer", // in-feed video ads
                        ".ytd-watch-next-secondary-results-renderer.sparkles-light-cta", ".ytd-unlimited-offer-module-renderer", // similar components
@@ -31,34 +45,66 @@ const taimuRipu = () => {
   });
 }
 
-const mutationCallback = (mutationList) => {    
+let autoConfirmContinue = true;
+const ELEMENT_NODE = 1;
+const waitVideoCallback = (mutationList) => {    
   for (const mutation of mutationList){ 
-    if (mutation.type === "childList"){  
+    if (mutation.type === "childList" && mutation.target.nodeType == ELEMENT_NODE){
+      if(mutation.target.id=="movie_player"){
+        ObserverForYTPage.disconnect()
+        let node = document.querySelector("#movie_player");
+        trySetObserver(ObserverForAd, node);
+        // if(autoConfirmContinue){
+        //   let n = document.querySelector("ytd-popup-container");
+        //   trySetObserver(ObserverForContinue, n);
+        // }
+      }
+    }
+  }
+};
+
+const byeAdCallback = (mutationList) => {    
+  for (const mutation of mutationList){ 
+    if (mutation.type === "childList" && mutation.target.nodeType == ELEMENT_NODE){
+      // if(mutation.target.classList.contains("video-ads") && mutation.target.childNodes.length > 0){}
       taimuRipu();
     }
   }
 };
-const ObserverForAd = new MutationObserver(mutationCallback);
 
-const activateObserver = () => {        
-  let pm = document.querySelector("ytd-page-manager");
-  ObserverForAd.observe(pm, {
+const confirmContinueCallback = (mutationList) => {    
+  for (const mutation of mutationList){ 
+    if (mutation.type === "childList" && mutation.target.nodeType == ELEMENT_NODE){
+      if(mutation.target.id=="confirm-button"){
+        document.querySelector("#confirm-button button")?.click();
+      }
+    }
+  }
+};
+
+const ObserverForYTPage = new MutationObserver(waitVideoCallback);
+const ObserverForAd = new MutationObserver(byeAdCallback);
+const ObserverForContinue = new MutationObserver(confirmContinueCallback);
+
+const activateObserver = (observer, node) => {      
+  observer.observe(node, {
+      // attributes: true,
       subtree: true,
       childList: true,
   });
 }
 
-const trySetObserver = (retry_times = 10) => {
+const trySetObserver = (observer, node, retry_times = 10) => {
   if(retry_times == 0) {
       console.error("trying to start fadblock(observer) failed.\nprevent futher attemption");
   }
   else{
       try{
-          activateObserver();
+          activateObserver(observer, node);
       }
       catch(err){
           console.debug(err.message, flag);
-          setTimeout(trySetObserver, 100, retry_times - 1);
+          setTimeout(trySetObserver, 100, observer, node, retry_times - 1);
       }
   }
 }
@@ -70,7 +116,16 @@ const init = () => {
     );
 
     // taimuRipu();
-    trySetObserver();
+    let n = document.getElementById("movie_player");
+    if(n){
+      trySetObserver(ObserverForAd, n);
+    }
+    else{
+      let nodeName = "ytd-page-manager";
+      let node = document.querySelector(nodeName);
+      trySetObserver(ObserverForYTPage, node);
+    }
 };
 
 init();
+console.log(3);
