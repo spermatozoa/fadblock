@@ -9,7 +9,7 @@ const taimuRipu = () => {
 
   try{
     // document.querySelector(".mgp_videoElement")
-
+    // console.log(skipLock);
     if (skipLock) {
       const videoPlayer = document.getElementsByClassName("video-stream")[0];
       if(videoPlayer.duration){        
@@ -18,11 +18,11 @@ const taimuRipu = () => {
         videoPlayer.paused && videoPlayer.play()
       }
       // CLICK ON THE SKIP AD BTN
-      document.querySelector(".ytp-ad-skip-button")?.click();
+      document.querySelector(".ytp-skip-ad-button")?.click();
       document.querySelector(".ytp-ad-skip-button-modern")?.click();
     } else if (surveyLock) {
       // CLICK ON THE SKIP SURVEY BTN
-      document.querySelector(".ytp-ad-skip-button")?.click();
+      document.querySelector(".ytp-skip-ad-button")?.click();
       document.querySelector(".ytp-ad-skip-button-modern")?.click();
     }
   }
@@ -82,9 +82,23 @@ const confirmContinueCallback = (mutationList) => {
   }
 };
 
+const allowYTAdCallback = (mutationList) => {
+  for (const mutation of mutationList){
+    if (mutation.type === "childList" && mutation.target.nodeType == ELEMENT_NODE){
+      if(mutation.target.classList.contains("yt-spec-button-view-model")){
+        document.querySelector("yt-playability-error-supported-renderers button")?.click()
+        if(!document.getElementsByClassName("video-stream")[0]?.duration){
+          window.location.reload();
+        }
+      }
+    }
+  }
+}
+
 const ObserverForYTPage = new MutationObserver(waitVideoCallback);
 const ObserverForAd = new MutationObserver(byeAdCallback);
 const ObserverForContinue = new MutationObserver(confirmContinueCallback);
+const ObserverForDetectAdBlock = new MutationObserver(allowYTAdCallback)
 
 const activateObserver = (observer, node) => {      
   observer.observe(node, {
@@ -125,7 +139,10 @@ const init = () => {
       let node = document.querySelector(nodeName);
       trySetObserver(ObserverForYTPage, node);
     }
+    let nodeName = "yt-playability-error-supported-renderers";
+    let node = document.querySelector(nodeName);
+    trySetObserver(ObserverForDetectAdBlock, node);
 };
 
 init();
-console.log(3);
+console.log(2);
